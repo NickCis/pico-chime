@@ -137,7 +137,7 @@ def playsong(mysong):
         # The array is twice the number of notes (notes + durations)
         for note in range(2, len(mysong), 2):
             note_duration = duration(tempo, int(mysong[note+1]))
-            print("note:", notes[mysong[note]], note_duration)
+            # print("note:", notes[mysong[note]], note_duration)
 
             if (mysong[note] == "REST"):
                 be_quiet()

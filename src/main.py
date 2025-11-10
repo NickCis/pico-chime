@@ -7,11 +7,12 @@ from utime import sleep
 
 from music import melody
 from notes import notes
-from config import buzzer_pin, button_pin, wifi_ssid, wifi_password, ntfy_topic, udp_port, udp_message
+from config import buzzer_pin, button_pin, led_pin, wifi_ssid, wifi_password, ntfy_topic, udp_port, udp_message
 
 buzzer = PWM(Pin(buzzer_pin))   # pin where buzzer is connected
 # pin where you may connect a button
 button = Pin(button_pin, Pin.IN, Pin.PULL_UP)
+led = Pin(led_pin, Pin.OUT)
 
 track = 1      # choose track here (see the list in melodies.py)
 volume = 600   # set volume to a value between 0 and 1000
@@ -107,11 +108,17 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 while True:
+    led.on()
     if button.value() == 0:
+        led.off()
         print("Timbre")
-        while button.value() == 0:
-            sleep(0.1)
-        sock.sendto(udp_message, ('255.255.255.255', udp_port))
+        try:
+            sock.sendto(udp_message, ('255.255.255.255', udp_port))
+        except Exception as e:
+            print('Error sending udp message:', e)
         send_notification(ntfy_topic, 'Hay alguien en la puerta')
         playsong(melody[track])
+
+        while button.value() == 0:
+            sleep(0.1)
     sleep(0.05)
