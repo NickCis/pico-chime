@@ -14,7 +14,7 @@ format: venv # Ejecuta autoformateo
 		autopep8 -i -r src
 
 install: # Instala los archivos en Raspberry Pi Pico
-	$(RSHELL) cp src/* /pyboard/
+	$(RSHELL) cp -r src/* /pyboard/
 
 repl: Inicia micropython
 	$(RSHELL) repl
