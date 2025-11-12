@@ -1,5 +1,4 @@
-import sys
-import uio
+import time
 import uasyncio
 import builtins
 
@@ -24,6 +23,7 @@ PROMPT = ">>> "
 original_print = builtins.print
 
 # Global state (single client)
+echo_enabled = False
 current_writer = None
 current_reader = None
 
@@ -31,22 +31,23 @@ current_reader = None
 def patched_print(*args, **kwargs):
     global current_writer, original_print
 
-    if current_writer is not None:
-        sep = kwargs.get("sep", " ")
-        end = kwargs.get("end", "\n")
-        msg = sep.join(str(a) for a in args) + end
-        msg = msg.replace("\n", "\r\n")
+    if echo_enabled:
+        if current_writer is not None:
+            sep = kwargs.get("sep", " ")
+            end = kwargs.get("end", "\n")
+            msg = sep.join(str(a) for a in args) + end
+            msg = msg.replace("\n", "\r\n")
 
-        try:
-            current_writer.write(msg.encode())
             try:
-                coro = current_writer.drain()
-                if coro:
-                    uasyncio.create_task(coro)
+                current_writer.write(msg.encode())
+                try:
+                    coro = current_writer.drain()
+                    if coro:
+                        uasyncio.create_task(coro)
+                except:
+                    pass
             except:
                 pass
-        except:
-            pass
 
     original_print(*args, **kwargs)
 
@@ -91,34 +92,7 @@ def execute_command(cmd, globals_dict):
     Executes command string. Tries eval first (for expressions), then exec.
     Returns a tuple (ok, result_text) where ok is True if executed without raising.
     """
-    buf = uio.StringIO()
-    # temporarily capture stdout/stderr to a string buffer, using python-level redirection
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    try:
-        sys.stdout = buf
-        sys.stderr = buf
-        # Try expression evaluation
-        try:
-            result = eval(cmd, globals_dict)
-            if result is not None:
-                print(repr(result))
-        except SyntaxError:
-            # fallback to exec if not an expression
-            exec(cmd, globals_dict)
-        return True, buf.getvalue()
-    except Exception as e:
-        # Write exception text to buffer
-        try:
-            import traceback
-            traceback.print_exc()
-            txt = buf.getvalue()
-        except Exception:
-            txt = "Exception: {}\n".format(e)
-        return False, txt
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
+    return (True, 'TODO:\n')
 
 
 async def read_line_telnet(reader):
@@ -161,16 +135,22 @@ async def read_line_telnet(reader):
 
 async def repl_loop(reader, writer):
     '''REPL loop: reads lines, executes them, prints results.'''
+
+    global echo_enabled
+
     repl_globals = {"__name__": "__telnet__"}
     await awrite(writer, WELCOME)
     await awrite(writer, "Password accepted. Starting remote REPL.\r\nType 'help' for commands, 'exit' to disconnect.\r\n")
-    await awrite(writer, PROMPT)
 
     while True:
         try:
+            await awrite(writer, PROMPT)
             line = await read_line_telnet(reader)
+            await awrite(writer, "\r\n")
+
             if not line:
-                break  # disconnected
+                continue
+
             # decode and strip CRLF and whitespace
             try:
                 s = line.decode('utf-8', 'ignore').rstrip('\r\n')
@@ -178,22 +158,33 @@ async def repl_loop(reader, writer):
                 s = line.rstrip(b'\r\n').decode('utf-8', 'ignore')
             s_strip = s.strip()
             if not s:
-                await awrite(writer, PROMPT)
                 continue
 
             # local commands
             if s_strip == "exit" or s_strip == "quit":
                 await awrite(writer, "Bye.\r\n")
                 break
+            elif s_strip == "echo on":
+                echo_enabled = True
+                await awrite(writer, "On\r\n")
+                continue
+            elif s_strip == "echo off":
+                echo_enabled = False
+                await awrite(writer, "Off\r\n")
+                continue
+            elif s_strip == "time":
+                t = time.localtime()
+                await awrite(writer, f'{t[0]}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}:{t[5]:02d}\r\n')
+                continue
             elif s_strip == "help":
                 help_text = (
                     "Remote telnet commands:\r\n"
-                    "  help        - show this help\r\n"
-                    "  exit/quit   - disconnect\r\n"
+                    "  help            - show this help\r\n"
+                    "  echo on/off     - enable / disable echoing pico logs\r\n"
+                    "  exit/quit       - disconnect\r\n"
                     "You can also enter Python expressions and statements.\r\n"
                 )
                 await awrite(writer, help_text)
-                await awrite(writer, PROMPT)
                 continue
 
             # Execute Python
@@ -203,12 +194,10 @@ async def repl_loop(reader, writer):
                 out = out.replace("\n", "\r\n")
                 await awrite(writer, out)
             # Finally prompt
-            await awrite(writer, PROMPT)
         except Exception as e:
             # send error but keep loop running
             try:
                 await awrite(writer, "REPL error: {}\r\n".format(e))
-                await awrite(writer, PROMPT)
             except Exception:
                 break
 
@@ -257,6 +246,8 @@ async def handle_client(reader, writer):
             return
 
         original_print(f'[telnet] Login correct')
+        send_iac(writer, WONT, OPT_ECHO)
+        await uasyncio.sleep_ms(50)
 
         # We only allow one client connected
         if current_writer:

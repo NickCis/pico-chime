@@ -46,9 +46,9 @@ class Player:
 
             # iterate over the notes of the melody.
             # Each note is a tuple (frequency, duration)
-            for note in song[2]:
-                frequency = note[0]
-                note_duration = int(duration(tempo, note[1]))
+            for i in range(0, (len(song) - 2) // 2):
+                frequency = song[2 + 2 * i]
+                note_duration = int(duration(tempo, song[2 + 2 * i + 1]))
 
                 if frequency == 0:  # REST
                     self.be_quiet()
