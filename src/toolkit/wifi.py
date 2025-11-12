@@ -196,6 +196,8 @@ async def wlan_reload_config(enabled, ssid, password=None):
         wlan = network.WLAN(network.STA_IF)
 
     wlan.active(True)
+    # wlan.config(pm=network.WLAN.PM_NONE)
+    wlan.config(pm=0xa11140)
     wlan.connect(ssid, password)
 
     while wlan.status() == network.STAT_CONNECTING:

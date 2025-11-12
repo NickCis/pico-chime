@@ -8,7 +8,7 @@ import struct
 import machine
 import uasyncio
 
-from .wifi import wlan
+from . import wifi
 from .config import config
 
 wait_time = 60 * 60  # 60 mins
@@ -89,7 +89,7 @@ async def coroutine():
     rtc = machine.RTC()
 
     while True:
-        if not wlan or not wlan.isconnected():
+        if not wifi.wlan or not wifi.wlan.isconnected():
             await uasyncio.sleep(30)
             continue
 
