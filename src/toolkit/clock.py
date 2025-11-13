@@ -96,10 +96,10 @@ async def coroutine():
         try:
             if config['clock']['sync']:
                 delta = int(config['clock']['delta'])
-                t = await get_ntp_time()
+                t = delta * 3600 + await get_ntp_time()
                 tm = time.gmtime(t)
                 rtc.datetime((tm[0], tm[1], tm[2], tm[6] + 1,
-                             tm[3] + delta, tm[4], tm[5], 0))
+                             tm[3], tm[4], tm[5], 0))
                 print('[clock] time synced successfully')
             await uasyncio.sleep(wait_time)
         except Exception as e:
