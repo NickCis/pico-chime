@@ -12,6 +12,7 @@ Group=root
 # Restart if it crashes
 Restart=on-failure
 RestartSec=5
+Environment="PYTHONUNBUFFERED=1"
 
 # If using GPIO, you may need these capabilities
 # (uncomment if required on Raspberry Pi OS)

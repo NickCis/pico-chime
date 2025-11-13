@@ -1,3 +1,4 @@
+import socket
 import builtins
 from datetime import datetime
 
@@ -10,7 +11,7 @@ say = print
 
 def print_date(*args, **kwargs):
     global say
-    say(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], *args, **kwargs)
+    say(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}]", *args, **kwargs)
 
 
 builtins.print = print_date
@@ -28,10 +29,10 @@ def main(port=Port, buzzer_pin=BuzzerPin, volume=Volume, song_name=Song):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("", port))  # Bind to all interfaces
 
-    print(f'Listening for UDP broadcasts on port {PORT}...')
+    print(f'Listening for UDP broadcasts on port {port}...')
     while True:
         data, addr = sock.recvfrom(1024)
         print(f'Received message from {addr}: {data.decode()}')
         if data == DoorbellMessage:
-            print(" :: Doorbell")
+            print(f'Doorbell message - playing: {song[0]}')
             player.playsong(song)

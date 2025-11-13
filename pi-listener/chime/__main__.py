@@ -41,5 +41,6 @@ if __name__ == '__main__':
         help=f'The song that will be played (default: {Song})'
     )
 
+    args = parser.parse_args()
     main(port=args.port, buzzer_pin=args.buzzer_pin,
-         volume=args.volume, song_name=args.song_name)
+         volume=args.volume, song_name=args.song)
