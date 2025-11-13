@@ -1,0 +1,22 @@
+[Unit]
+Description=Pico Chime Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m chime
+WorkingDirectory=/opt/pico-chime
+User=root
+Group=root
+
+# Restart if it crashes
+Restart=on-failure
+RestartSec=5
+
+# If using GPIO, you may need these capabilities
+# (uncomment if required on Raspberry Pi OS)
+# CapabilityBoundingSet=CAP_SYS_RAWIO
+# ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
